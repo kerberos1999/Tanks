@@ -27,6 +27,18 @@ enum class TileState
 };
 
 // structs:
+struct Projectile
+{
+	Point2f position{};
+	ProjectileState state{};
+	float speed{ 500.0f };
+	float angle{};
+	bool active{};
+	// TODO:  Warning fix ==> Severity	Code	Description	Project	File	Line	Suppression State  
+	// Warning	C26495	Variable 'Projectile::angle' is uninitialized.Always initialize a member variable(type.6).Tanks	C : \Users\nicka\OneDrive\Dokumente\GitHub\Tanks\1DAE10_Tanks_FroeseDavid_AzarafrozNick\Tanks\Game.h	37
+
+};
+
 struct Tank
 {
 	Point2f position;
@@ -36,7 +48,10 @@ struct Tank
 	float turnSpeed;
 	float currentHP;
 	float maxHP;
+
+	Projectile* projectiles;
 };
+
 struct TankControls
 {
 	SDL_Scancode leftKey;
@@ -46,19 +61,11 @@ struct TankControls
 
 	SDL_Keycode fireKey;
 };
-struct Projectile
-{
-	Point2f position;
-	utils::Texture texture;
-	ProjectileState state;
-	float speed;
-	float angle;
-};
 
 // const globals:
 const float g_Scaling{ 2.0f };           // scaling of all tiles, sprites, etc.
 const float g_CellSize{ 16.0f };         
-const int g_PlayerCount{ 1 };            // how many players? (up to 4)
+const int g_PlayerCount{ 2 };            // how many players? (up to 4)
 const float g_TankSpeed{ 100.0f };
 const float g_TankTurnSpeed{ g_Pi / 2 };
 const float g_TankHP{ 10.0f };
@@ -89,8 +96,7 @@ const Point2f g_HealthbarPositions[] // define health bar positions here
 
 // globals
 Tank g_Tanks[g_PlayerCount]{};
-
-Projectile g_Projectiles[g_PlayerCount]{};    
+Projectile g_Projectile; // TODO ==> Projectile Array => MuniLager
 
 Texture g_ProjectileStandardTexture{};
 
@@ -108,10 +114,10 @@ void UpdateTanks(float elapsedSec);
 
 void TurnTank(Tank& tank, float angle);
 
-//void UpdateProjectiles(float elapsedSec);
+void UpdateProjectiles(float elapsedSec);
 
 void DrawTanks();
-//void DrawProjectiles();
+void DrawProjectiles();
 void DrawHealthBars();
 
 #pragma endregion ownDeclarations

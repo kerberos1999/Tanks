@@ -14,7 +14,10 @@ void Draw()
 {
 	ClearBackground();
 
-	//DrawProjectiles();
+	if (g_Projectile.active == true) 
+	{
+		DrawProjectiles();
+	}
 	DrawTanks();
 
 	//-------------------- UI -----------------------------
@@ -25,8 +28,8 @@ void Draw()
 void Update(float elapsedSec)
 {
 	// physics
-	//UpdateProjectiles(elapsedSec);
-
+	
+	UpdateProjectiles(elapsedSec);
 	UpdateTanks(elapsedSec);
 }
 
@@ -46,16 +49,21 @@ void OnKeyDownEvent(SDL_Keycode key)
 
 void OnKeyUpEvent(SDL_Keycode key)
 {
+	for (int i{}; i < g_PlayerCount; ++i) 
+	{
+		if (g_TankControls[i].fireKey == key) 
+		{
+			if (g_Projectile.active == false)
+			{
+				g_Projectile.active = true;
+				g_Projectile.position = g_Tanks[i].position;
+				g_Projectile.angle = g_Tanks[i].angle;
+			}
+		}
+	}
+
 	switch (key)
 	{
-	case SDLK_SPACE:
-		/*if (g_IsProjectileActive1 == false)
-		{
-			g_IsProjectileActive1 = true;
-			g_ProjectilePos1 = g_TankPos1;
-			g_ProjectileAngle = g_TankAngle1;
-		}*/
-		break;
 	case SDLK_1:
 		--g_Tanks[0].currentHP;
 		break;
@@ -127,6 +135,8 @@ void InitTanks()
 		g_Tanks[i].maxHP = g_TankHP;
 		g_Tanks[i].speed = g_TankSpeed;
 		g_Tanks[i].turnSpeed = g_TankTurnSpeed;
+
+		//TODO: Projectile Array => MuniLager
 	}
 
 	// single textures
@@ -197,16 +207,16 @@ void UpdateTanks(float elapsedSec)
 
 }
 
-//void UpdateProjectile1(float elapsedSec)
-//{
-//	g_ProjectilePos1.x += cosf(g_ProjectileAngle) * g_ProjectileSpeed1 * elapsedSec;
-//	g_ProjectilePos1.y += sinf(g_ProjectileAngle) * g_ProjectileSpeed1 * elapsedSec;
-//
-//	if (g_ProjectilePos1.x >= g_WindowWidth || g_ProjectilePos1.y >= g_WindowHeight || g_ProjectilePos1.x <= 0 || g_ProjectilePos1.y <= 0)
-//	{
-//		g_IsProjectileActive1 = false;
-//	}
-//}
+void UpdateProjectiles(float elapsedSec)
+{
+	g_Projectile.position.x += cosf(g_Projectile.angle) * g_Projectile.speed * elapsedSec;
+	g_Projectile.position.y += sinf(g_Projectile.angle) * g_Projectile.speed * elapsedSec;
+
+	if (g_Projectile.position.x >= g_WindowWidth || g_Projectile.position.y >= g_WindowHeight || g_Projectile.position.x <= 0 || g_Projectile.position.y <= 0)
+	{
+		g_Projectile.active = false;
+	}
+}
 
 void DrawTanks()
 {
@@ -222,16 +232,19 @@ void DrawTanks()
 	}
 }
 
-//void DrawProjectile() 
-//{
-//	Rectf destinationProjectile{};
-//	const float offset{ 10.0f };
-//	destinationProjectile.left = (g_ProjectilePos1.x + cosf(g_TankAngle1) * offset) - (g_ProjectileTexStandard.width / 2) * g_Scaling;
-//	destinationProjectile.bottom = (g_ProjectilePos1.y + sinf(g_TankAngle1) * offset) - (g_ProjectileTexStandard.height / 2) * g_Scaling;
-//	destinationProjectile.width = g_ProjectileTexStandard.width * g_Scaling;
-//	destinationProjectile.height = g_ProjectileTexStandard.height * g_Scaling;
-//	DrawTexture(g_ProjectileTexStandard, destinationProjectile, g_ProjectileAngle);
-//}
+void DrawProjectiles() 
+{
+	for (int i{}; i < g_PlayerCount; ++i) 
+	{
+		Rectf destinationProjectile{};
+		const float offset{ 10.0f };
+		destinationProjectile.left = (g_Projectile.position.x + cosf(g_Tanks[i].angle) * offset) - (g_ProjectileStandardTexture.width / 2) * g_Scaling;
+		destinationProjectile.bottom = (g_Projectile.position.y + sinf(g_Tanks[i].angle) * offset) - (g_ProjectileStandardTexture.height / 2) * g_Scaling;
+		destinationProjectile.width = g_ProjectileStandardTexture.width * g_Scaling;
+		destinationProjectile.height = g_ProjectileStandardTexture.height * g_Scaling;
+		DrawTexture(g_ProjectileStandardTexture, destinationProjectile, g_Projectile.angle);
+	}
+}
 
 void DrawHealthBars() 
 {
