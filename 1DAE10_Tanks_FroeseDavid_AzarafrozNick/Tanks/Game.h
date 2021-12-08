@@ -14,11 +14,13 @@ float g_WindowHeight{ 720 };
 #pragma region ownDeclarations
 // const globals:
 const float g_Scaling{ 2.0f };           // scaling of all tiles, sprites, etc.
-const float g_CellSize{ 16.0f };
+const int g_Rows{ 15 }, g_Cols{ 20 };    // rows and columns of map
+const float g_CellSize{ 24.0f };
 const int g_PlayerCount{ 2 };            // how many players? (up to 4)
 const float g_TankSpeed{ 100.0f };
 const float g_TankTurnSpeed{ g_Pi / 2 };
 const float g_TankHP{ 10.0f };
+const float g_ProjectileSpeed{ 500.0f };
 const int g_MaxProjectiles{ 3 };
 
 // enums:
@@ -32,7 +34,8 @@ enum class TileState
 	empty,
 	unbreakableWall,
 	breakableWall,
-	woodenBox
+	woodenBox,
+	last
 };
 
 // structs:
@@ -40,22 +43,22 @@ struct Projectile
 {
 	Point2f position{};
 	ProjectileState state{};
-	float speed{ 500.0f };
-	float angle{};
+	float speed{ g_ProjectileSpeed };
+	float angle{ 0 };
 	bool active{};
 };
 
 struct Tank
 {
-	Point2f position;
-	utils::Texture texture;
-	float angle;
-	float speed;
-	float turnSpeed;
-	float currentHP;
-	float maxHP;
+	Point2f position{};
+	utils::Texture texture{};
+	float angle{};
+	float speed{ g_TankSpeed };
+	float turnSpeed{ g_TankTurnSpeed };
+	float currentHP{ g_TankHP };
+	float maxHP{ g_TankHP };
 
-	Projectile projectiles[g_MaxProjectiles];
+	Projectile projectiles[g_MaxProjectiles]{};
 };
 
 struct TankControls
@@ -72,22 +75,23 @@ const TankControls g_TankControls[]  // define controls here
 {
 	{SDL_SCANCODE_A, SDL_SCANCODE_D, SDL_SCANCODE_W, SDL_SCANCODE_S, SDLK_SPACE},
 	{SDL_SCANCODE_LEFT, SDL_SCANCODE_RIGHT, SDL_SCANCODE_UP, SDL_SCANCODE_DOWN, SDLK_RETURN},
-	{}
+	{SDL_SCANCODE_A, SDL_SCANCODE_D, SDL_SCANCODE_W, SDL_SCANCODE_S, SDLK_SPACE},
+	{SDL_SCANCODE_A, SDL_SCANCODE_D, SDL_SCANCODE_W, SDL_SCANCODE_S, SDLK_SPACE}
 };
 
 const Point2f g_TankStartPositions[] // define start positions here
 {
-	Point2f{ 64, 64 },
-	Point2f{ g_WindowWidth - 64, g_WindowHeight - 64 },
-	Point2f{ 64, g_WindowHeight - 64 },
-	Point2f{ g_WindowWidth - 64, 64}
+	Point2f{ 80, 80 },
+	Point2f{ g_WindowWidth - 80, g_WindowHeight - 80 },
+	Point2f{ 80, g_WindowHeight - 80 },
+	Point2f{ g_WindowWidth - 80, 80}
 };
 
 const Point2f g_HealthbarPositions[] // define health bar positions here
 {
-	Point2f{ 20, g_WindowHeight - 40 },
-	Point2f{ g_WindowWidth - 174, g_WindowHeight - 40 },
 	Point2f{ 20, 20 },
+	Point2f{ g_WindowWidth - 174, g_WindowHeight - 40 },
+	Point2f{ 20, g_WindowHeight - 40 },
 	Point2f{ g_WindowWidth - 174, 20 },
 };
 //const int g_MaxProjectiles{ 3 }; // max projectile count per player
@@ -102,20 +106,20 @@ Texture g_HealthBarBackgroundTexture{};
 Texture g_HealthBarTextures[g_PlayerCount]{};
 Texture g_HealthBarFillingTextures[g_PlayerCount]{};
 
-const int g_Rows{ 23 }, g_Cols{ 30 };
 TileState* g_pGridMap;
 
-Texture g_WoodTexture{};
+Texture g_TileTextures[int(TileState::last)]{};
 
 //----------------------------------------------------------------------------------
 
 // Declare your own functions here
-void InitTanks();
-void DeleteTanks();
+void InitGame();
+void DeleteGame();
 
 void UpdateTanks(float elapsedSec);
 
 void TurnTank(Tank& tank, float angle);
+void FireProjectile(Tank& tank);
 
 void UpdateProjectiles(float elapsedSec);
 
