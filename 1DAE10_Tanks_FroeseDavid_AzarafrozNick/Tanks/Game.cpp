@@ -224,6 +224,19 @@ void FireProjectile(Tank& tank)
 	}
 }
 
+bool CheckCollision(const Rectf& collisionRect) 
+{
+	// check if rectangle is colliding with wall in grid
+	for (int i{}; i < g_Rows * g_Cols; i++)
+	{
+		int row{ i / g_Cols }, col{ i % g_Cols };
+		Rectf tileRect{ col * g_CellSize * g_Scaling, row * g_CellSize * g_Scaling, g_CellSize * g_Scaling, g_CellSize * g_Scaling};
+		if (g_pGridMap[i] != TileState::empty && IsOverlapping(collisionRect, tileRect))
+			return true;
+	}
+	return false;
+}
+
 void UpdateTanks(float elapsedSec)
 {
 	// input for all tanks
@@ -240,20 +253,51 @@ void UpdateTanks(float elapsedSec)
 			TurnTank(g_Tanks[i], g_Tanks[i].turnSpeed * elapsedSec);
 		}
 
-		// moving
+		// determine move direction
+		float hspd{}, vspd{};
+		Rectf collisionRect
+		{ 
+			g_Tanks[i].position.x - g_Tanks[i].width * g_Scaling / 2, 
+			g_Tanks[i].position.y - g_Tanks[i].height * g_Scaling / 2, 
+			g_Tanks[i].width * g_Scaling, 
+			g_Tanks[i].height * g_Scaling
+		};
+
 		if (pStates[g_TankControls[i].upKey])
 		{
-			g_Tanks[i].position.x += cosf(g_Tanks[i].angle) * g_Tanks[i].speed * elapsedSec;
-			g_Tanks[i].position.y += sinf(g_Tanks[i].angle) * g_Tanks[i].speed * elapsedSec;
+			hspd = cosf(g_Tanks[i].angle) * g_Tanks[i].speed * elapsedSec;
+			vspd = sinf(g_Tanks[i].angle) * g_Tanks[i].speed * elapsedSec;
 		}
 		else if (pStates[g_TankControls[i].downKey])
 		{
-			g_Tanks[i].position.x -= cosf(g_Tanks[i].angle) * g_Tanks[i].speed * elapsedSec;
-			g_Tanks[i].position.y -= sinf(g_Tanks[i].angle) * g_Tanks[i].speed * elapsedSec;
+			hspd = -cosf(g_Tanks[i].angle) * g_Tanks[i].speed * elapsedSec;
+			vspd = -sinf(g_Tanks[i].angle) * g_Tanks[i].speed * elapsedSec;
 		}
-	}
 
-	// TODO: Collision detection
+		// horizontal collisions
+		if (hspd != 0)
+		{
+			collisionRect.left += hspd;
+			if (CheckCollision(collisionRect))
+				hspd = 0;
+		}
+
+		// reset left position for vertical check
+		collisionRect.left = g_Tanks[i].position.x - g_Tanks[i].width * g_Scaling / 2;
+
+		// vertical collisions
+		if (vspd != 0)
+		{
+			collisionRect.bottom += vspd;
+			if (CheckCollision(collisionRect))
+				vspd = 0;
+		}
+
+		// move tank
+		g_Tanks[i].position.x += hspd;
+		g_Tanks[i].position.y += vspd;
+
+	}
 
 }
 

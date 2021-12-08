@@ -69,8 +69,29 @@ namespace utils
 	void DeleteTexture(Texture& texture);
 #pragma endregion TextureFunctionality
 
-#pragma region CollisionFunctionality
+#pragma region VectorFunctionality
+	void DrawVector(const Vector2f& vector, const Point2f& startPoint = {});
+	std::string ToString(const Vector2f& vector);
+	Vector2f Add(const Vector2f& vector1, const Vector2f& vector2);
+	Vector2f Subtract(const Vector2f& vector1, const Vector2f& vector2);
+	float DotProduct(const Vector2f& vector1, const Vector2f& vector2);
+	float CrossProduct(const Vector2f& vector1, const Vector2f& vector2);
+	float Length(const Vector2f& vector);
+	Vector2f Scale(const Vector2f& vector, float scale);
+	Vector2f Normalize(const Vector2f& vector);
+	float AngleBetween(const Vector2f& vector1, const Vector2f& vector2);
+	bool AreEqual(const Vector2f& vector1, const Vector2f& vector2);
+#pragma endregion
 
+#pragma region CollisionFunctionality
+	float GetDistance(float startX, float startY, float endX, float endY);
+	float GetDistance(const Point2f& start, const Point2f& end);
+
+	bool IsPointInCircle(const Point2f& point, const Circlef& circle);
+	bool IsPointInRect(const Point2f& point, const Rectf& rectangle);
+
+	bool IsOverlapping(const Rectf& rect1, const Rectf& rect2);
+	bool IsOverlapping(const Circlef& circle1, const Circlef& circle2);
 #pragma endregion CollisionFunctionality
 
 }

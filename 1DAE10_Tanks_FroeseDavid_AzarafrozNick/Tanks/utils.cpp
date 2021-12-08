@@ -530,9 +530,118 @@ namespace utils
 	}
 #pragma endregion textureImplementations
 
+#pragma region VectorFunctionality
+
+	void DrawVector(const Vector2f& vector, const Point2f& startPoint)
+	{
+		Point2f endPoint{ startPoint.x + vector.x, startPoint.y + vector.y };
+		float angle = atan2f(vector.y, vector.x), triangleSize = 10.0f;
+
+		// unrotated triangle points if vector was pointing to the right at origin
+		Point2f left{ Point2f(-cosf(g_Pi / 6) * triangleSize, -sinf(g_Pi / 6) * triangleSize) },
+			right{ Point2f(-cosf(g_Pi / 6) * triangleSize, sinf(g_Pi / 6) * triangleSize) };
+
+		// rotation around origin formular : x = x * cos(angle) - y * sin(angle), y = y * cos(angle) + x * sin(angle) 
+		left = Point2f(left.x * cosf(angle) - left.y * sinf(angle), left.y * cosf(angle) + left.x * sinf(angle));
+		right = Point2f(right.x * cosf(angle) - right.y * sinf(angle), right.y * cosf(angle) + right.x * sinf(angle));
+
+		// translate to endPosition
+		left = Point2f(left.x + endPoint.x, left.y + endPoint.y);
+		right = Point2f(right.x + endPoint.x, right.y + endPoint.y);
+
+		// draw vector
+		DrawLine(startPoint, endPoint);
+		FillTriangle(left, endPoint, right);
+	}
+
+
+	std::string ToString(const Vector2f& vector)
+	{
+		return "[" + std::to_string(vector.x) + ", " + std::to_string(vector.y) + "]";
+	}
+
+	Vector2f Add(const Vector2f& vector1, const Vector2f& vector2)
+	{
+		return Vector2f(vector1.x + vector2.x, vector1.y + vector2.y);
+	}
+
+	Vector2f Subtract(const Vector2f& vector1, const Vector2f& vector2)
+	{
+		return Vector2f(vector1.x - vector2.x, vector1.y - vector2.y);
+	}
+
+	float DotProduct(const Vector2f& vector1, const Vector2f& vector2)
+	{
+		return vector1.x * vector2.x + vector1.y * vector2.y;
+	}
+	float CrossProduct(const Vector2f& vector1, const Vector2f& vector2)
+	{
+		return vector1.x * vector2.y - vector1.y * vector2.x;
+	}
+	float Length(const Vector2f& vector)
+	{
+		return sqrtf(powf(vector.x, 2) + powf(vector.y, 2));
+	}
+	Vector2f Scale(const Vector2f& vector, float scale)
+	{
+		return Vector2f(vector.x * scale, vector.y * scale);
+	}
+	Vector2f Normalize(const Vector2f& vector)
+	{
+		return Vector2f(vector.x / Length(vector), vector.y / Length(vector));
+	}
+	float AngleBetween(const Vector2f& vector1, const Vector2f& vector2)
+	{
+		return atan2(CrossProduct(vector1, vector2), DotProduct(vector1, vector2));
+	}
+	bool AreEqual(const Vector2f& vector1, const Vector2f& vector2)
+	{
+		return abs(vector1.x - vector2.x) <= 0.001f && abs(vector1.y - vector2.y) <= 0.001f;
+	}
+#pragma endregion VectorFunctionality
+
 
 #pragma region CollisionFunctionality
+	float GetDistance(float startX, float startY, float endX, float endY)
+	{
+		float distanceX{ endX - startX }, distanceY{ endY - startY };
+		return sqrtf(float(pow(distanceX, 2) + pow(distanceY, 2)));
+	}
 
+	float GetDistance(const Point2f& start, const Point2f& end)
+	{
+		Point2f distance{ end.x - start.x, end.y - start.y };
+		return sqrtf(float(pow(distance.x, 2) + pow(distance.y, 2)));
+	}
 
+	bool IsPointInCircle(const Point2f& point, const Circlef& circle)
+	{
+		return (GetDistance(circle.center, point) <= circle.radius);
+	}
+
+	bool IsPointInRect(const Point2f& point, const Rectf& rectangle)
+	{
+		return (point.x > rectangle.left && point.x <= rectangle.left + rectangle.width &&
+			point.y > rectangle.bottom && point.y <= rectangle.bottom + rectangle.height);
+	}
+	bool IsOverlapping(const Rectf& rect1, const Rectf& rect2)
+	{
+		// rectangle is a line?
+		if (rect1.width == 0 || rect1.height == 0 || rect2.width == 0 || rect2.height == 0) return false;
+
+		// rectangle on right of other
+		if (rect1.left >= rect2.left + rect2.width || rect2.left >= rect1.left + rect1.width) return false;
+
+		// rectangle above other
+		if (rect1.bottom >= rect2.bottom + rect2.height || rect2.bottom >= rect1.bottom + rect1.height) return false;
+
+		// overlap!
+		return true;
+	}
+
+	bool IsOverlapping(const Circlef& circle1, const Circlef& circle2)
+	{
+		return GetDistance(circle1.center, circle2.center) < circle1.radius + circle2.radius;
+	}
 #pragma endregion CollisionFunctionality
 }
