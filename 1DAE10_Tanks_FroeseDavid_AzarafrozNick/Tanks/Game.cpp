@@ -8,15 +8,22 @@ void Start()
 {
 	//LoadTextures();
 	InitTanks();
+	g_pGridMap = new TileState[g_Rows * g_Cols];
 }
 
 void Draw()
 {
 	ClearBackground();
-
-	if (g_Projectile.active == true) 
+	DrawGrid();
+	for (int i{}; i < g_PlayerCount; ++i) 
 	{
-		DrawProjectiles();
+		for (int j{}; j < g_MaxProjectiles; ++j) 
+		{
+			if (g_Tanks[i].projectiles[j].active == true)
+			{
+				DrawProjectiles();
+			}
+		}
 	}
 	DrawTanks();
 
@@ -37,6 +44,8 @@ void End()
 {
 	//DeleteTextures();
 	DeleteTanks();
+	delete[] g_pGridMap;
+	g_pGridMap = nullptr;
 }
 #pragma endregion gameFunctions
 
@@ -51,13 +60,18 @@ void OnKeyUpEvent(SDL_Keycode key)
 {
 	for (int i{}; i < g_PlayerCount; ++i) 
 	{
-		if (g_TankControls[i].fireKey == key) 
+		// shoot projectile if key pressed
+		if (g_TankControls[i].fireKey == key)
 		{
-			if (g_Projectile.active == false)
+ 			for (int j{}; j < g_MaxProjectiles; ++j)
 			{
-				g_Projectile.active = true;
-				g_Projectile.position = g_Tanks[i].position;
-				g_Projectile.angle = g_Tanks[i].angle;
+				if (g_Tanks[i].projectiles[j].active == false)
+				{
+					g_Tanks[i].projectiles[j].active = true;
+					g_Tanks[i].projectiles[j].position = g_Tanks[i].position;
+					g_Tanks[i].projectiles[j].angle = g_Tanks[i].angle;
+					break;
+				}
 			}
 		}
 	}
@@ -127,7 +141,7 @@ void InitTanks()
 
 		if (!TextureFromFile("Resources/tank_" + std::to_string(i) + ".png", g_Tanks[i].texture))
 			std::cout << "Resources/tank_" + std::to_string(i) + ".png " << "could not be loaded!" << '\n';
-	
+
 		// attributes
 		g_Tanks[i].position = g_TankStartPositions[i];
 		g_Tanks[i].angle = 0.0f;
@@ -135,9 +149,9 @@ void InitTanks()
 		g_Tanks[i].maxHP = g_TankHP;
 		g_Tanks[i].speed = g_TankSpeed;
 		g_Tanks[i].turnSpeed = g_TankTurnSpeed;
-
-		//TODO: Projectile Array => MuniLager
 	}
+
+	TextureFromFile("Resources/tile_0.png", g_WoodTexture);
 
 	// single textures
 	if (!TextureFromFile("Resources/healthbar_background.png", g_HealthBarBackgroundTexture))
@@ -209,12 +223,22 @@ void UpdateTanks(float elapsedSec)
 
 void UpdateProjectiles(float elapsedSec)
 {
-	g_Projectile.position.x += cosf(g_Projectile.angle) * g_Projectile.speed * elapsedSec;
-	g_Projectile.position.y += sinf(g_Projectile.angle) * g_Projectile.speed * elapsedSec;
-
-	if (g_Projectile.position.x >= g_WindowWidth || g_Projectile.position.y >= g_WindowHeight || g_Projectile.position.x <= 0 || g_Projectile.position.y <= 0)
+	for (int i{}; i < g_PlayerCount; ++i) 
 	{
-		g_Projectile.active = false;
+		for (int j{}; j < g_MaxProjectiles; ++j) 
+		{
+			if (g_Tanks[i].projectiles[j].active)
+			{
+				g_Tanks[i].projectiles[j].position.x += cosf(g_Tanks[i].projectiles[j].angle) * g_Tanks[i].projectiles[j].speed * elapsedSec;
+				g_Tanks[i].projectiles[j].position.y += sinf(g_Tanks[i].projectiles[j].angle) * g_Tanks[i].projectiles[j].speed * elapsedSec;
+
+
+				if (g_Tanks[i].projectiles[j].position.x >= g_WindowWidth || g_Tanks[i].projectiles[j].position.y >= g_WindowHeight || g_Tanks[i].projectiles[j].position.x <= 0 || g_Tanks[i].projectiles[j].position.y <= 0)
+				{
+					g_Tanks[i].projectiles[j].active = false;
+				}
+			}
+		}
 	}
 }
 
@@ -236,13 +260,19 @@ void DrawProjectiles()
 {
 	for (int i{}; i < g_PlayerCount; ++i) 
 	{
-		Rectf destinationProjectile{};
-		const float offset{ 10.0f };
-		destinationProjectile.left = (g_Projectile.position.x + cosf(g_Tanks[i].angle) * offset) - (g_ProjectileStandardTexture.width / 2) * g_Scaling;
-		destinationProjectile.bottom = (g_Projectile.position.y + sinf(g_Tanks[i].angle) * offset) - (g_ProjectileStandardTexture.height / 2) * g_Scaling;
-		destinationProjectile.width = g_ProjectileStandardTexture.width * g_Scaling;
-		destinationProjectile.height = g_ProjectileStandardTexture.height * g_Scaling;
-		DrawTexture(g_ProjectileStandardTexture, destinationProjectile, g_Projectile.angle);
+		for (int j{}; j < g_MaxProjectiles; ++j) 
+		{
+			if (g_Tanks[i].projectiles[j].active) 
+			{
+				Rectf destinationProjectile{};
+				const float offset{ 10.0f };
+				destinationProjectile.left = (g_Tanks[i].projectiles[j].position.x + cosf(g_Tanks[i].angle) * offset) - (g_ProjectileStandardTexture.width / 2) * g_Scaling;
+				destinationProjectile.bottom = (g_Tanks[i].projectiles[j].position.y + sinf(g_Tanks[i].angle) * offset) - (g_ProjectileStandardTexture.height / 2) * g_Scaling;
+				destinationProjectile.width = g_ProjectileStandardTexture.width * g_Scaling;
+				destinationProjectile.height = g_ProjectileStandardTexture.height * g_Scaling;
+				DrawTexture(g_ProjectileStandardTexture, destinationProjectile, g_Tanks[i].projectiles[j].angle);
+			}
+		}
 	}
 }
 
@@ -280,17 +310,18 @@ void DrawHealthBars()
 		}
 	}
 }
-//
-//void DrawHealthBar2()
-//{
-//	DrawTexture(g_HealthBarTex2, g_HealthBarPos2);
-//	DrawTexture(g_HealthBarBackground, g_HealthBarBackgroundPos2);
-//	Rectf destinationHealth2{};
-//	float hp2 = g_TankCurrentHP2 / g_TankMaxHP2;
-//	destinationHealth2.left = g_HealthBarFillingPos2.x;
-//	destinationHealth2.bottom = g_HealthBarFillingPos2.y;
-//	destinationHealth2.width = g_HealthBarFillingTex2.width * hp2;
-//	destinationHealth2.height = g_HealthBarFillingTex2.height;
-//	DrawTexture(g_HealthBarFillingTex2, destinationHealth2);
-//}
+
+void DrawGrid()
+{
+	for (int i{}; i < g_Rows * g_Cols; ++i) 
+	{
+		Rectf destinationRect{};
+
+		destinationRect.left = ((i % g_Cols) * g_CellSize) * g_Scaling;
+		destinationRect.bottom = ((i / g_Cols) * g_CellSize) * g_Scaling;
+		destinationRect.width = g_WoodTexture.width * g_Scaling;
+		destinationRect.height = g_WoodTexture.height * g_Scaling;
+		DrawTexture(g_WoodTexture, destinationRect);
+	}
+}
 #pragma endregion ownDefinitions

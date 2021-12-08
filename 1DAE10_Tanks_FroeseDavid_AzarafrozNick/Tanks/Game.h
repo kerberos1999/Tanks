@@ -12,6 +12,15 @@ float g_WindowHeight{ 720 };
 
 
 #pragma region ownDeclarations
+// const globals:
+const float g_Scaling{ 2.0f };           // scaling of all tiles, sprites, etc.
+const float g_CellSize{ 16.0f };
+const int g_PlayerCount{ 2 };            // how many players? (up to 4)
+const float g_TankSpeed{ 100.0f };
+const float g_TankTurnSpeed{ g_Pi / 2 };
+const float g_TankHP{ 10.0f };
+const int g_MaxProjectiles{ 3 };
+
 // enums:
 enum class ProjectileState
 {
@@ -34,9 +43,6 @@ struct Projectile
 	float speed{ 500.0f };
 	float angle{};
 	bool active{};
-	// TODO:  Warning fix ==> Severity	Code	Description	Project	File	Line	Suppression State  
-	// Warning	C26495	Variable 'Projectile::angle' is uninitialized.Always initialize a member variable(type.6).Tanks	C : \Users\nicka\OneDrive\Dokumente\GitHub\Tanks\1DAE10_Tanks_FroeseDavid_AzarafrozNick\Tanks\Game.h	37
-
 };
 
 struct Tank
@@ -49,7 +55,7 @@ struct Tank
 	float currentHP;
 	float maxHP;
 
-	Projectile* projectiles;
+	Projectile projectiles[g_MaxProjectiles];
 };
 
 struct TankControls
@@ -61,14 +67,6 @@ struct TankControls
 
 	SDL_Keycode fireKey;
 };
-
-// const globals:
-const float g_Scaling{ 2.0f };           // scaling of all tiles, sprites, etc.
-const float g_CellSize{ 16.0f };         
-const int g_PlayerCount{ 2 };            // how many players? (up to 4)
-const float g_TankSpeed{ 100.0f };
-const float g_TankTurnSpeed{ g_Pi / 2 };
-const float g_TankHP{ 10.0f };
 
 const TankControls g_TankControls[]  // define controls here
 {
@@ -96,13 +94,18 @@ const Point2f g_HealthbarPositions[] // define health bar positions here
 
 // globals
 Tank g_Tanks[g_PlayerCount]{};
-Projectile g_Projectile; // TODO ==> Projectile Array => MuniLager
+
+Projectile g_Projectiles[g_MaxProjectiles]{};
 
 Texture g_ProjectileStandardTexture{};
-
 Texture g_HealthBarBackgroundTexture{};
 Texture g_HealthBarTextures[g_PlayerCount]{};
 Texture g_HealthBarFillingTextures[g_PlayerCount]{};
+
+const int g_Rows{ 23 }, g_Cols{ 30 };
+TileState* g_pGridMap;
+
+Texture g_WoodTexture{};
 
 //----------------------------------------------------------------------------------
 
@@ -116,6 +119,7 @@ void TurnTank(Tank& tank, float angle);
 
 void UpdateProjectiles(float elapsedSec);
 
+void DrawGrid();
 void DrawTanks();
 void DrawProjectiles();
 void DrawHealthBars();
