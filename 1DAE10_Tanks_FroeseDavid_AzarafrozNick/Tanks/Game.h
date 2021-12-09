@@ -13,10 +13,10 @@ float g_WindowHeight{ 720 };
 
 #pragma region ownDeclarations
 // const globals:
+const int g_PlayerCount{ 2 };            // how many players? (up to 4)
 const float g_Scaling{ 2.0f };           // scaling of all tiles, sprites, etc.
 const int g_Rows{ 15 }, g_Cols{ 20 };    // rows and columns of map
 const float g_CellSize{ 24.0f };
-const int g_PlayerCount{ 2 };            // how many players? (up to 4)
 const float g_TankSpeed{ 120.0f };
 const float g_TankTurnSpeed{ g_Pi / 2 };
 const float g_TankHP{ 10.0f };
@@ -91,9 +91,9 @@ const Point2f g_TankStartPositions[] // define start positions here
 const Point2f g_HealthbarPositions[] // define health bar positions here
 {
 	Point2f{ 20, 20 },
-	Point2f{ g_WindowWidth - 174, g_WindowHeight - 40 },
+	Point2f{ g_WindowWidth - 256, g_WindowHeight - 40 },
 	Point2f{ 20, g_WindowHeight - 40 },
-	Point2f{ g_WindowWidth - 174, 20 },
+	Point2f{ g_WindowWidth - 256, 20 },
 };
 
 // globals
