@@ -26,10 +26,11 @@ void Draw()
 
 void Update(float elapsedSec)
 {
+	UpdateProjectiles(elapsedSec);
+
 	// physics
 	if (!g_GameOver)
 	{
-		UpdateProjectiles(elapsedSec);
 		UpdateTanks(elapsedSec);
 	}
 	else 
@@ -210,12 +211,6 @@ void InitGame()
 		g_Tanks[i].position = g_TankStartPositions[i];
 		g_Tanks[i].angle = atan2f(g_WindowHeight / 2 - g_Tanks[i].position.y, g_WindowWidth / 2 - g_Tanks[i].position.x);
 		g_Tanks[i].currentHP = g_TankHP;
-
-		// set all projectiles to inactive!
-		for (int j{}; j < g_MaxProjectiles; ++j)
-		{
-			g_Tanks[i].projectiles[j].active = false;
-		}
 	}
 }
 
