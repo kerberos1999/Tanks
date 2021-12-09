@@ -20,6 +20,7 @@ const int g_PlayerCount{ 2 };            // how many players? (up to 4)
 const float g_TankSpeed{ 120.0f };
 const float g_TankTurnSpeed{ g_Pi / 2 };
 const float g_TankHP{ 10.0f };
+const float g_TankSize{ 20.0f };
 const float g_ProjectileSpeed{ 600.0f };
 const int g_MaxProjectiles{ 3 };
 
@@ -52,8 +53,7 @@ struct Tank
 {
 	Point2f position{};
 	utils::Texture texture{};
-	float width{ 16 },
-		  height{ 16 },
+	float size{ g_TankSize },
 		  angle{}, 
 		  speed{ g_TankSpeed }, 
 		  turnSpeed{ g_TankTurnSpeed },
@@ -82,10 +82,10 @@ const TankControls g_TankControls[]  // define controls here
 
 const Point2f g_TankStartPositions[] // define start positions here
 {
-	Point2f{ 80, 80 },
-	Point2f{ g_WindowWidth - 80, g_WindowHeight - 80 },
-	Point2f{ 80, g_WindowHeight - 80 },
-	Point2f{ g_WindowWidth - 80, 80}
+	Point2f{ 68, 68 },
+	Point2f{ g_WindowWidth - 68, g_WindowHeight - 68 },
+	Point2f{ 68, g_WindowHeight - 68 },
+	Point2f{ g_WindowWidth - 68, 68}
 };
 
 const Point2f g_HealthbarPositions[] // define health bar positions here
@@ -120,7 +120,7 @@ void UpdateTanks(float elapsedSec);
 
 void TurnTank(Tank& tank, float angle);
 void FireProjectile(Tank& tank);
-bool CheckCollision(const Rectf& collisionRect);
+TileState CheckTileCollision(const Rectf& collisionRect);
 
 void UpdateProjectiles(float elapsedSec);
 

@@ -120,6 +120,7 @@ void InitGame()
 		}
 		else 
 		{
+			// REMOVE THIS AND GENERATE DECENT MAPS PLS
 			int randomNumber{ rand() % 101 };
 			if (randomNumber <= 85)
 			{
@@ -224,7 +225,7 @@ void FireProjectile(Tank& tank)
 	}
 }
 
-bool CheckCollision(const Rectf& collisionRect) 
+TileState CheckTileCollision(const Rectf& collisionRect)
 {
 	// check if rectangle is colliding with wall in grid
 	for (int i{}; i < g_Rows * g_Cols; i++)
@@ -232,9 +233,9 @@ bool CheckCollision(const Rectf& collisionRect)
 		int row{ i / g_Cols }, col{ i % g_Cols };
 		Rectf tileRect{ col * g_CellSize * g_Scaling, row * g_CellSize * g_Scaling, g_CellSize * g_Scaling, g_CellSize * g_Scaling};
 		if (g_pGridMap[i] != TileState::empty && IsOverlapping(collisionRect, tileRect))
-			return true;
+			return g_pGridMap[i];
 	}
-	return false;
+	return TileState::empty;
 }
 
 void UpdateTanks(float elapsedSec)
@@ -257,10 +258,10 @@ void UpdateTanks(float elapsedSec)
 		float hspd{}, vspd{};
 		Rectf collisionRect
 		{ 
-			g_Tanks[i].position.x - g_Tanks[i].width * g_Scaling / 2, 
-			g_Tanks[i].position.y - g_Tanks[i].height * g_Scaling / 2, 
-			g_Tanks[i].width * g_Scaling, 
-			g_Tanks[i].height * g_Scaling
+			g_Tanks[i].position.x - g_Tanks[i].size * g_Scaling / 2,
+			g_Tanks[i].position.y - g_Tanks[i].size * g_Scaling / 2,
+			g_Tanks[i].size * g_Scaling,
+			g_Tanks[i].size * g_Scaling
 		};
 
 		if (pStates[g_TankControls[i].upKey])
@@ -278,18 +279,18 @@ void UpdateTanks(float elapsedSec)
 		if (hspd != 0)
 		{
 			collisionRect.left += hspd;
-			if (CheckCollision(collisionRect))
+			if (CheckTileCollision(collisionRect) != TileState::empty)
 				hspd = 0;
 		}
 
 		// reset left position for vertical check
-		collisionRect.left = g_Tanks[i].position.x - g_Tanks[i].width * g_Scaling / 2;
+		collisionRect.left = g_Tanks[i].position.x - g_Tanks[i].size * g_Scaling / 2;
 
 		// vertical collisions
 		if (vspd != 0)
 		{
 			collisionRect.bottom += vspd;
-			if (CheckCollision(collisionRect))
+			if (CheckTileCollision(collisionRect) != TileState::empty)
 				vspd = 0;
 		}
 
