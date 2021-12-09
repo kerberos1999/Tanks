@@ -13,13 +13,13 @@ float g_WindowHeight{ 720 };
 
 #pragma region ownDeclarations
 // const globals:
-const int g_PlayerCount{ 4 };            // how many players? (up to 4)
+const int g_PlayerCount{ 2 };            // how many players? (up to 4)
 const float g_Scaling{ 2.0f };           // scaling of all tiles, sprites, etc.
 const int g_Rows{ 15 }, g_Cols{ 20 };    // rows and columns of map
 const float g_CellSize{ 24.0f };
 const float g_TankSpeed{ 120.0f };
 const float g_TankTurnSpeed{ g_Pi / 2 };
-const float g_TankHP{ 10.0f };
+const int g_TankHP{ 10 };
 const float g_TankSize{ 20.0f };
 const float g_ProjectileSpeed{ 600.0f };
 const int g_MaxProjectiles{ 3 };
@@ -63,11 +63,11 @@ struct Tank
 	Point2f position{};
 	utils::Texture texture{}, destroyedTexture{};
 	float size{ g_TankSize },
-		  angle{}, 
-		  speed{ g_TankSpeed }, 
-		  turnSpeed{ g_TankTurnSpeed },
-		  currentHP{ g_TankHP },
-		  maxHP{ g_TankHP };
+		angle{},
+		speed{ g_TankSpeed },
+		turnSpeed{ g_TankTurnSpeed };
+    int currentHP{ g_TankHP },
+		maxHP{ g_TankHP };
 	Projectile projectiles[g_MaxProjectiles]{};
 };
 
@@ -107,13 +107,17 @@ const Point2f g_HealthbarPositions[] // define health bar positions here
 
 // globals
 Tank g_Tanks[g_PlayerCount]{};
-
 Projectile g_Projectiles[g_MaxProjectiles]{};
+
+bool g_GameOver{};
+int g_TankWinnerIndex{};
+float g_GameOverElapsedSec{};
 
 Texture g_ProjectileStandardTexture{};
 Texture g_HealthBarBackgroundTexture{};
 Texture g_HealthBarTextures[g_PlayerCount]{};
 Texture g_HealthBarFillingTextures[g_PlayerCount]{};
+Texture g_GameOverTextures[g_PlayerCount]{};
 
 Tile* g_pGridMap;
 
@@ -122,22 +126,26 @@ Texture g_TileTextures[int(TileState::last)]{};
 //----------------------------------------------------------------------------------
 
 // Declare your own functions here
-void InitGame();
-void DeleteGame();
+void LoadTextures();
+void DeleteTextures();
 
-void UpdateTanks(float elapsedSec);
+void InitGame();
 
 void TurnTank(Tank& tank, float angle);
 void FireProjectile(Tank& tank);
 Tile CheckTileCollision(const Rectf& collisionRect);
 void CheckTankCollision(Projectile& projectile);
+void TakeDamage(Tank& tank, int damage);
 
+void UpdateTanks(float elapsedSec);
 void UpdateProjectiles(float elapsedSec);
+void UpdateGameOver(float elapsedSec);
 
 void DrawGrid();
 void DrawTanks();
 void DrawProjectiles();
 void DrawHealthBars();
+void DrawGameOver();
 
 #pragma endregion ownDeclarations
 

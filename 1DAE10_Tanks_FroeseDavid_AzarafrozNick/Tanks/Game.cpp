@@ -6,6 +6,7 @@
 #pragma region gameFunctions											
 void Start()
 {
+	LoadTextures();
 	InitGame();
 }
 
@@ -20,20 +21,31 @@ void Draw()
 	//-------------------- UI -----------------------------
 
 	DrawHealthBars();
+	DrawGameOver();
 }
 
 void Update(float elapsedSec)
 {
 	// physics
+	if (!g_GameOver)
+	{
+		UpdateProjectiles(elapsedSec);
+		UpdateTanks(elapsedSec);
+	}
+	else 
+	{
+		UpdateGameOver(elapsedSec);
+	}
 	
-	UpdateProjectiles(elapsedSec);
-	UpdateTanks(elapsedSec);
 }
 
 void End()
 {
-	//DeleteTextures();
-	DeleteGame();
+	// delete map
+	delete[] g_pGridMap;
+	g_pGridMap = nullptr;
+
+	DeleteTextures();
 }
 #pragma endregion gameFunctions
 
@@ -46,29 +58,16 @@ void OnKeyDownEvent(SDL_Keycode key)
 
 void OnKeyUpEvent(SDL_Keycode key)
 {
-	for (int i{}; i < g_PlayerCount; ++i) 
+	if (!g_GameOver)
 	{
-		// shoot projectile if key pressed
-		if (g_TankControls[i].fireKey == key)
+		for (int i{}; i < g_PlayerCount; ++i)
 		{
-			FireProjectile(g_Tanks[i]);
+			// shoot projectile if key pressed
+			if (g_Tanks[i].currentHP > 0 && g_TankControls[i].fireKey == key)
+			{
+				FireProjectile(g_Tanks[i]);
+			}
 		}
-	}
-
-	switch (key)
-	{
-	case SDLK_1:
-		--g_Tanks[0].currentHP;
-		break;
-	case SDLK_2:
-		++g_Tanks[0].currentHP;
-		break;
-	case SDLK_3:
-		--g_Tanks[1].currentHP;
-		break;
-	case SDLK_4:
-		++g_Tanks[1].currentHP;
-		break;
 	}
 }
 
@@ -107,8 +106,71 @@ void OnMouseUpEvent(const SDL_MouseButtonEvent& e)
 #pragma region ownDefinitions
 // Define your own functions here
 
+void LoadTextures()
+{
+	for (int i{}; i < g_PlayerCount; ++i)
+	{
+		// textures
+		if (!TextureFromFile("Resources/healthbar_" + std::to_string(i) + ".png", g_HealthBarTextures[i]))
+			std::cout << "Resources/healthbar_" + std::to_string(i) + ".png " << "could not be loaded!" << '\n';
+
+		if (!TextureFromFile("Resources/healthbar_filling_" + std::to_string(i) + ".png", g_HealthBarFillingTextures[i]))
+			std::cout << "Resources/healthbar_filling_" + std::to_string(i) + ".png " << "could not be loaded!" << '\n';
+
+		if (!TextureFromFile("Resources/tank_" + std::to_string(i) + ".png", g_Tanks[i].texture))
+			std::cout << "Resources/tank_" + std::to_string(i) + ".png " << "could not be loaded!" << '\n';
+
+		if (!TextureFromFile("Resources/tank_destroyed_" + std::to_string(i) + ".png", g_Tanks[i].destroyedTexture))
+			std::cout << "Resources/tank_destroyed_" + std::to_string(i) + ".png " << "could not be loaded!" << '\n';
+
+		if (!TextureFromString("Player " + std::to_string(i + 1) + " has won!", "Resources/arialbd.ttf", 30, Color4f(1.0f, 1.0f, 1.0f, 1.0f), g_GameOverTextures[i]))
+			std::cout << "Resources/tank_destroyed_" + std::to_string(i) + ".png " << "could not be loaded!" << '\n';
+	}
+
+	// tiles
+	for (int i{}; i < int(TileState::last); i++)
+	{
+		if (!TextureFromFile("Resources/tile_" + std::to_string(i) + ".png", g_TileTextures[i]))
+			std::cout << "Resources/tile_" + std::to_string(i) + ".png" << " could not be loaded!" << '\n';
+	}
+
+	// single textures
+	if (!TextureFromFile("Resources/healthbar_background.png", g_HealthBarBackgroundTexture))
+		std::cout << "Resources/healthbar_background.png " << "could not be loaded!" << '\n';
+
+	if (!TextureFromFile("Resources/projectile_0.png", g_ProjectileStandardTexture))
+		std::cout << "Resources/projectile_0.png " << "could not be loaded!" << '\n';
+}
+
+void DeleteTextures()
+{
+	// tank stuff
+	for (int i{}; i < g_PlayerCount; ++i)
+	{
+		DeleteTexture(g_HealthBarTextures[i]);
+		DeleteTexture(g_HealthBarFillingTextures[i]);
+		DeleteTexture(g_GameOverTextures[i]);
+		DeleteTexture(g_Tanks[i].texture);
+		DeleteTexture(g_Tanks[i].destroyedTexture);
+	}
+
+	// tiles
+	for (int i{}; i < int(TileState::last); i++)
+	{
+		DeleteTexture(g_TileTextures[i]);
+	}
+
+	// single textures
+	DeleteTexture(g_HealthBarBackgroundTexture);
+	DeleteTexture(g_ProjectileStandardTexture);
+}
+
 void InitGame()
 {
+	// delete old map if set
+	delete[] g_pGridMap;
+	g_pGridMap = nullptr;
+
 	// init map
 	g_pGridMap = new Tile[g_Rows * g_Cols];
 	for (int i{}; i < g_Rows * g_Cols; ++i)
@@ -119,7 +181,11 @@ void InitGame()
 		{
 			g_pGridMap[i].state = TileState::unbreakableWall;
 		}
-		else 
+		else if(row == 1 || col == 1 || row == g_Rows - 2 || col == g_Cols - 2)
+		{
+			g_pGridMap[i].state = TileState::empty;
+		}
+		else
 		{
 			// REMOVE THIS AND GENERATE DECENT MAPS PLS
 			int randomNumber{ rand() % 101 };
@@ -140,59 +206,17 @@ void InitGame()
 
 	for (int i{}; i < g_PlayerCount; ++i)
 	{
-		// textures
-		if (!TextureFromFile("Resources/healthbar_" + std::to_string(i) + ".png", g_HealthBarTextures[i]))
-			std::cout << "Resources/healthbar_" + std::to_string(i) + ".png " << "could not be loaded!" << '\n';
-
-		if (!TextureFromFile("Resources/healthbar_filling_" + std::to_string(i) + ".png", g_HealthBarFillingTextures[i]))
-			std::cout << "Resources/healthbar_filling_" + std::to_string(i) + ".png " << "could not be loaded!" << '\n';
-
-		if (!TextureFromFile("Resources/tank_" + std::to_string(i) + ".png", g_Tanks[i].texture))
-			std::cout << "Resources/tank_" + std::to_string(i) + ".png " << "could not be loaded!" << '\n';
-
 		// init position and angle of tanks (facing to the center)
 		g_Tanks[i].position = g_TankStartPositions[i];
 		g_Tanks[i].angle = atan2f(g_WindowHeight / 2 - g_Tanks[i].position.y, g_WindowWidth / 2 - g_Tanks[i].position.x);
+		g_Tanks[i].currentHP = g_TankHP;
 
+		// set all projectiles to inactive!
+		for (int j{}; j < g_MaxProjectiles; ++j)
+		{
+			g_Tanks[i].projectiles[j].active = false;
+		}
 	}
-	
-	// tiles
-	for (int i{}; i < int(TileState::last); i++)
-	{
-		if (!TextureFromFile("Resources/tile_" + std::to_string(i) + ".png", g_TileTextures[i]))
-			std::cout << "Resources/tile_" + std::to_string(i) + ".png" << " could not be loaded!" << '\n';
-	}
-	
-	// single textures
-	if (!TextureFromFile("Resources/healthbar_background.png", g_HealthBarBackgroundTexture))
-		std::cout << "Resources/healthbar_background.png " << "could not be loaded!" << '\n';
-
-	if (!TextureFromFile("Resources/projectile_0.png", g_ProjectileStandardTexture))
-		std::cout << "Resources/projectile_0.png " << "could not be loaded!" << '\n';
-}
-
-void DeleteGame()
-{
-	// delete map
-	delete[] g_pGridMap;
-	g_pGridMap = nullptr;
-
-	for (int i{}; i < g_PlayerCount; ++i)
-	{
-		DeleteTexture(g_HealthBarTextures[i]);
-		DeleteTexture(g_HealthBarFillingTextures[i]);
-		DeleteTexture(g_Tanks[i].texture);
-	}
-
-	// tiles
-	for (int i{}; i < int(TileState::last); i++)
-	{
-		if (!TextureFromFile("Resources/tile_" + std::to_string(i) + ".png", g_TileTextures[i]))
-			std::cout << "Resources/tile_" + std::to_string(i) + ".png" << " could not be loaded!" << '\n';
-	}
-
-	DeleteTexture(g_HealthBarBackgroundTexture);
-	DeleteTexture(g_ProjectileStandardTexture);
 }
 
 void TurnTank(Tank& tank, float angle)
@@ -258,80 +282,102 @@ void CheckTankCollision(Projectile& projectile)
 		if (IsOverlapping(projectileRect, tankRect)) 
 		{
 			projectile.active = false;
-			--g_Tanks[i].currentHP;
+			TakeDamage(g_Tanks[i], 1); // TODO: For funture: change to projectile power
 		}
 	}
 }
 
 void TakeDamage(Tank& tank, int damage) 
 {
-	if (tank.currentHP <= 0) 
-	{
-
-	}
 	tank.currentHP -= damage;
+	if (tank.currentHP <= 0)
+	{
+		tank.currentHP = 0;
+	}
+	else if(tank.currentHP > tank.maxHP)
+	{
+		tank.currentHP = tank.maxHP;
+	}
 }
 
 void UpdateTanks(float elapsedSec)
 {
+	// check if player has won
+	int count{}, winnerIndex{};
+	for (int i{}; i < g_PlayerCount; i++)
+	{
+		if (g_Tanks[i].currentHP > 0)
+		{
+			count++;
+			winnerIndex = i;
+		}
+	}
+	if (count == 1)
+	{
+		g_TankWinnerIndex = winnerIndex;
+		g_GameOver = true;
+	}
+
 	// input for all tanks
 	const Uint8* pStates = SDL_GetKeyboardState(nullptr);
 	for (int i{}; i < g_PlayerCount; i++)
 	{
-		// turning
-		if (pStates[g_TankControls[i].rightKey])
+		if (g_Tanks[i].currentHP > 0)
 		{
-			TurnTank(g_Tanks[i], -g_Tanks[i].turnSpeed * elapsedSec);
+			// turning
+			if (pStates[g_TankControls[i].rightKey])
+			{
+				TurnTank(g_Tanks[i], -g_Tanks[i].turnSpeed * elapsedSec);
+			}
+			else if (pStates[g_TankControls[i].leftKey])
+			{
+				TurnTank(g_Tanks[i], g_Tanks[i].turnSpeed * elapsedSec);
+			}
+
+			// determine move direction
+			float hspd{}, vspd{};
+			Rectf collisionRect
+			{
+				g_Tanks[i].position.x - g_Tanks[i].size * g_Scaling / 2,
+				g_Tanks[i].position.y - g_Tanks[i].size * g_Scaling / 2,
+				g_Tanks[i].size * g_Scaling,
+				g_Tanks[i].size * g_Scaling
+			};
+
+			if (pStates[g_TankControls[i].upKey])
+			{
+				hspd = cosf(g_Tanks[i].angle) * g_Tanks[i].speed * elapsedSec;
+				vspd = sinf(g_Tanks[i].angle) * g_Tanks[i].speed * elapsedSec;
+			}
+			else if (pStates[g_TankControls[i].downKey])
+			{
+				hspd = -cosf(g_Tanks[i].angle) * g_Tanks[i].speed * elapsedSec;
+				vspd = -sinf(g_Tanks[i].angle) * g_Tanks[i].speed * elapsedSec;
+			}
+
+			// horizontal collisions
+			if (hspd != 0)
+			{
+				collisionRect.left += hspd;
+				if (CheckTileCollision(collisionRect).state != TileState::empty)
+					hspd = 0;
+			}
+
+			// reset left position for vertical check
+			collisionRect.left = g_Tanks[i].position.x - g_Tanks[i].size * g_Scaling / 2;
+
+			// vertical collisions
+			if (vspd != 0)
+			{
+				collisionRect.bottom += vspd;
+				if (CheckTileCollision(collisionRect).state != TileState::empty)
+					vspd = 0;
+			}
+
+			// move tank
+			g_Tanks[i].position.x += hspd;
+			g_Tanks[i].position.y += vspd;
 		}
-		else if (pStates[g_TankControls[i].leftKey])
-		{
-			TurnTank(g_Tanks[i], g_Tanks[i].turnSpeed * elapsedSec);
-		}
-
-		// determine move direction
-		float hspd{}, vspd{};
-		Rectf collisionRect
-		{ 
-			g_Tanks[i].position.x - g_Tanks[i].size * g_Scaling / 2,
-			g_Tanks[i].position.y - g_Tanks[i].size * g_Scaling / 2,
-			g_Tanks[i].size * g_Scaling,
-			g_Tanks[i].size * g_Scaling
-		};
-
-		if (pStates[g_TankControls[i].upKey])
-		{
-			hspd = cosf(g_Tanks[i].angle) * g_Tanks[i].speed * elapsedSec;
-			vspd = sinf(g_Tanks[i].angle) * g_Tanks[i].speed * elapsedSec;
-		}
-		else if (pStates[g_TankControls[i].downKey])
-		{
-			hspd = -cosf(g_Tanks[i].angle) * g_Tanks[i].speed * elapsedSec;
-			vspd = -sinf(g_Tanks[i].angle) * g_Tanks[i].speed * elapsedSec;
-		}
-
-		// horizontal collisions
-		if (hspd != 0)
-		{
-			collisionRect.left += hspd;
-			if (CheckTileCollision(collisionRect).state != TileState::empty)
-				hspd = 0;
-		}
-
-		// reset left position for vertical check
-		collisionRect.left = g_Tanks[i].position.x - g_Tanks[i].size * g_Scaling / 2;
-
-		// vertical collisions
-		if (vspd != 0)
-		{
-			collisionRect.bottom += vspd;
-			if (CheckTileCollision(collisionRect).state != TileState::empty)
-				vspd = 0;
-		}
-
-		// move tank
-		g_Tanks[i].position.x += hspd;
-		g_Tanks[i].position.y += vspd;
-
 	}
 
 }
@@ -352,17 +398,23 @@ void UpdateProjectiles(float elapsedSec)
 
 				Tile tile{ CheckTileCollision(destinationProjectile) };
 
+				if (tile.state != TileState::empty && g_Tanks[i].projectiles[j].state != ProjectileState::bouncing)
+				{
+					g_Tanks[i].projectiles[j].active = false;
+				}
+				else if(tile.state != TileState::empty)
+				{
+					// TODO: bouncing 
+				}
+
 				switch (tile.state)
 				{
 				case TileState::woodenBox: 
-					g_Tanks[i].projectiles[j].active = false;
 					g_pGridMap[tile.idx].state = TileState::empty;
 					break;
 				case TileState::unbreakableWall:
-					g_Tanks[i].projectiles[j].active = false;
 					break;
 				case TileState::breakableWall:
-					g_Tanks[i].projectiles[j].active = false;
 					--tile.health;
 					if (tile.health <= 0) 
 					{
@@ -384,6 +436,18 @@ void UpdateProjectiles(float elapsedSec)
 				}
 			}
 		}
+	}
+}
+
+void UpdateGameOver(float elapsedSec)
+{
+	const float secondsToRestart{ 3 };
+	g_GameOverElapsedSec += elapsedSec;
+	if (g_GameOverElapsedSec >= secondsToRestart)
+	{
+		g_GameOverElapsedSec = 0;
+		g_GameOver = false;
+		InitGame();
 	}
 }
 
@@ -414,12 +478,24 @@ void DrawTanks()
 	// draw all tanks
 	for (int i{}; i < g_PlayerCount; i++)
 	{
+		// determine texture
 		Rectf destinationRect{};
-		destinationRect.left = g_Tanks[i].position.x - (g_Tanks[i].texture.width / 2) * g_Scaling;
-		destinationRect.bottom = g_Tanks[i].position.y - (g_Tanks[i].texture.height / 2) * g_Scaling;
-		destinationRect.width = g_Tanks[i].texture.width * g_Scaling;
-		destinationRect.height = g_Tanks[i].texture.height * g_Scaling;
-		DrawTexture(g_Tanks[i].texture, destinationRect, g_Tanks[i].angle);
+		Texture texture{};
+		if (g_Tanks[i].currentHP > 0)
+		{
+			texture = g_Tanks[i].texture;
+		}
+		else 
+		{
+			texture = g_Tanks[i].destroyedTexture;
+		}
+
+		// draw texture
+		destinationRect.left = g_Tanks[i].position.x - (texture.width / 2) * g_Scaling;
+		destinationRect.bottom = g_Tanks[i].position.y - (texture.height / 2) * g_Scaling;
+		destinationRect.width = texture.width * g_Scaling;
+		destinationRect.height = texture.height * g_Scaling;
+		DrawTexture(texture, destinationRect, g_Tanks[i].angle);
 	}
 }
 
@@ -465,20 +541,32 @@ void DrawHealthBars()
 		if (g_Tanks[i].currentHP > 0)
 		{
 			// filling
-			float hpScale = g_Tanks[i].currentHP / g_Tanks[i].maxHP,
-				xOffset = 16.0f * g_Scaling, yOffset = 3.0f * g_Scaling;
+			float hpScale = g_Tanks[i].currentHP / float(g_Tanks[i].maxHP),
+				  xOffset = 16.0f * g_Scaling, yOffset = 3.0f * g_Scaling;
 			destinationHealth.left = g_HealthbarPositions[i].x + xOffset;
 			destinationHealth.bottom = g_HealthbarPositions[i].y + yOffset;
 			destinationHealth.width = g_HealthBarFillingTextures[i].width * g_Scaling * hpScale;
 			destinationHealth.height = g_HealthBarFillingTextures[i].height * g_Scaling;
 			DrawTexture(g_HealthBarFillingTextures[i], destinationHealth);
 		}
-		else 
-		{
-			g_Tanks[i].currentHP = 0;
-		}
 	}
 }
+void DrawGameOver()
+{
+	if (g_GameOver)
+	{
+		const float width{ 300 * g_Scaling }, height{ 100 * g_Scaling };
+		const Color4f color{ 33 / 255.0f, 31 / 255.0f, 51 / 255.0f, 0.75f };
+		SetColor(color);
+		FillRect(Point2f(g_WindowWidth / 2 - width / 2, g_WindowHeight / 2 - height / 2), width, height);
 
-
+		Texture texture{ g_GameOverTextures[g_TankWinnerIndex] };
+		Rectf destinationRect{};
+		destinationRect.left = g_WindowWidth / 2 - texture.width / 2 * g_Scaling;
+		destinationRect.bottom = g_WindowHeight / 2 - texture.height / 2 * g_Scaling;
+		destinationRect.width = texture.width * g_Scaling;
+		destinationRect.height = texture.height * g_Scaling;
+		DrawTexture(texture, destinationRect);
+	}
+}
 #pragma endregion ownDefinitions
