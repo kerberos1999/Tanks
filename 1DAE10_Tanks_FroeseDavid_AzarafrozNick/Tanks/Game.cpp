@@ -110,13 +110,14 @@ void OnMouseUpEvent(const SDL_MouseButtonEvent& e)
 void InitGame()
 {
 	// init map
-	g_pGridMap = new TileState[g_Rows * g_Cols];
+	g_pGridMap = new Tile[g_Rows * g_Cols];
 	for (int i{}; i < g_Rows * g_Cols; ++i)
 	{
 		int row{ i / g_Cols }, col{ i % g_Cols };
+		g_pGridMap[i].idx = i;
 		if (row == 0 || row == g_Rows - 1 || col == 0 || col == g_Cols - 1)
 		{
-			g_pGridMap[i] = TileState::unbreakableWall;
+			g_pGridMap[i].state = TileState::unbreakableWall;
 		}
 		else 
 		{
@@ -124,15 +125,15 @@ void InitGame()
 			int randomNumber{ rand() % 101 };
 			if (randomNumber <= 85)
 			{
-				g_pGridMap[i] = TileState::empty;
+				g_pGridMap[i].state = TileState::empty;
 			}
 			else if (randomNumber <= 98)
 			{
-				g_pGridMap[i] = TileState::unbreakableWall;
+				g_pGridMap[i].state = TileState::unbreakableWall;
 			}
 			else
 			{
-				g_pGridMap[i] = TileState::woodenBox;
+				g_pGridMap[i].state = TileState::woodenBox;
 			}
 		}
 	}
@@ -225,17 +226,50 @@ void FireProjectile(Tank& tank)
 	}
 }
 
-TileState CheckTileCollision(const Rectf& collisionRect)
+Tile CheckTileCollision(const Rectf& collisionRect)
 {
 	// check if rectangle is colliding with wall in grid
 	for (int i{}; i < g_Rows * g_Cols; i++)
 	{
 		int row{ i / g_Cols }, col{ i % g_Cols };
 		Rectf tileRect{ col * g_CellSize * g_Scaling, row * g_CellSize * g_Scaling, g_CellSize * g_Scaling, g_CellSize * g_Scaling};
-		if (g_pGridMap[i] != TileState::empty && IsOverlapping(collisionRect, tileRect))
+		if (g_pGridMap[i].state != TileState::empty && IsOverlapping(collisionRect, tileRect))
 			return g_pGridMap[i];
 	}
-	return TileState::empty;
+	return Tile{};
+}
+
+void CheckTankCollision(Projectile& projectile)
+{
+	for (int i{}; i < g_PlayerCount; ++i) 
+	{
+		Rectf projectileRect{};
+		projectileRect.left = projectile.position.x - projectile.size / 2;
+		projectileRect.bottom = projectile.position.y - projectile.size / 2;
+		projectileRect.width = projectile.size;
+		projectileRect.height = projectile.size;
+
+		Rectf tankRect{};
+		tankRect.left = g_Tanks[i].position.x - g_Tanks[i].size / 2;
+		tankRect.bottom = g_Tanks[i].position.y - g_Tanks[i].size / 2;
+		tankRect.width = g_Tanks[i].size;
+		tankRect.height = g_Tanks[i].size;
+
+		if (IsOverlapping(projectileRect, tankRect)) 
+		{
+			projectile.active = false;
+			--g_Tanks[i].currentHP;
+		}
+	}
+}
+
+void TakeDamage(Tank& tank, int damage) 
+{
+	if (tank.currentHP <= 0) 
+	{
+
+	}
+	tank.currentHP -= damage;
 }
 
 void UpdateTanks(float elapsedSec)
@@ -279,7 +313,7 @@ void UpdateTanks(float elapsedSec)
 		if (hspd != 0)
 		{
 			collisionRect.left += hspd;
-			if (CheckTileCollision(collisionRect) != TileState::empty)
+			if (CheckTileCollision(collisionRect).state != TileState::empty)
 				hspd = 0;
 		}
 
@@ -290,7 +324,7 @@ void UpdateTanks(float elapsedSec)
 		if (vspd != 0)
 		{
 			collisionRect.bottom += vspd;
-			if (CheckTileCollision(collisionRect) != TileState::empty)
+			if (CheckTileCollision(collisionRect).state != TileState::empty)
 				vspd = 0;
 		}
 
@@ -310,6 +344,35 @@ void UpdateProjectiles(float elapsedSec)
 		{
 			if (g_Tanks[i].projectiles[j].active)
 			{
+				Rectf destinationProjectile{};
+				destinationProjectile.left = g_Tanks[i].projectiles[j].position.x - g_Tanks[i].projectiles[j].size / 2;
+				destinationProjectile.bottom = g_Tanks[i].projectiles[j].position.y - g_Tanks[i].projectiles[j].size / 2;
+				destinationProjectile.width = g_Tanks[i].projectiles[j].size;
+				destinationProjectile.height = g_Tanks[i].projectiles[j].size;
+
+				Tile tile{ CheckTileCollision(destinationProjectile) };
+
+				switch (tile.state)
+				{
+				case TileState::woodenBox: 
+					g_Tanks[i].projectiles[j].active = false;
+					g_pGridMap[tile.idx].state = TileState::empty;
+					break;
+				case TileState::unbreakableWall:
+					g_Tanks[i].projectiles[j].active = false;
+					break;
+				case TileState::breakableWall:
+					g_Tanks[i].projectiles[j].active = false;
+					--tile.health;
+					if (tile.health <= 0) 
+					{
+						g_pGridMap[tile.idx].state = TileState::empty;
+					}
+					break;
+				}
+
+				CheckTankCollision(g_Tanks[i].projectiles[j]);
+
 				// movement
 				g_Tanks[i].projectiles[j].position.x += cosf(g_Tanks[i].projectiles[j].angle) * g_Tanks[i].projectiles[j].speed * elapsedSec;
 				g_Tanks[i].projectiles[j].position.y += sinf(g_Tanks[i].projectiles[j].angle) * g_Tanks[i].projectiles[j].speed * elapsedSec;
@@ -336,7 +399,7 @@ void DrawGrid()
 	{
 		Rectf destinationRect{};
 
-		int row{ i / g_Cols }, column{ i % g_Cols }, tileState{ int(g_pGridMap[i]) };
+		int row{ i / g_Cols }, column{ i % g_Cols }, tileState{ int(g_pGridMap[i].state) };
 
 		destinationRect.left = column * g_CellSize * g_Scaling;
 		destinationRect.bottom = row * g_CellSize * g_Scaling;
