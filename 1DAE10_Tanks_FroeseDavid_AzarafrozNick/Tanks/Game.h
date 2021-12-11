@@ -24,6 +24,8 @@ const float g_TankSize{ 20.0f };
 const float g_ProjectileSpeed{ 600.0f };
 const int g_MaxProjectiles{ 3 };
 const float g_ProjectileSize{ 8.0f };
+const int g_MaxItems{ 2 };
+const float g_MaxItemCooldown{ 3.0f };
 
 // enums:
 enum class ProjectileState
@@ -37,6 +39,8 @@ enum class TileState
 	unbreakableWall,
 	breakableWall,
 	woodenBox,
+	healthBox,
+	bounceBox,
 	last
 };
 
@@ -69,6 +73,7 @@ struct Tank
     int currentHP{ g_TankHP },
 		maxHP{ g_TankHP };
 	Projectile projectiles[g_MaxProjectiles]{};
+	float itemCooldown{};
 };
 
 struct TankControls

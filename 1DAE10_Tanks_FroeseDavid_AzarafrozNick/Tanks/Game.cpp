@@ -141,6 +141,7 @@ void LoadTextures()
 
 	if (!TextureFromFile("Resources/projectile_0.png", g_ProjectileStandardTexture))
 		std::cout << "Resources/projectile_0.png " << "could not be loaded!" << '\n';
+
 }
 
 void DeleteTextures()
@@ -190,13 +191,21 @@ void InitGame()
 		{
 			// REMOVE THIS AND GENERATE DECENT MAPS PLS
 			int randomNumber{ rand() % 101 };
-			if (randomNumber <= 85)
+			if (randomNumber <= 75)
 			{
 				g_pGridMap[i].state = TileState::empty;
 			}
-			else if (randomNumber <= 98)
+			else if (randomNumber <= 85)
 			{
 				g_pGridMap[i].state = TileState::unbreakableWall;
+			}
+			else if (randomNumber <= 86)
+			{
+				g_pGridMap[i].state = TileState::healthBox;
+			}
+			else if (randomNumber <= 88)
+			{
+				g_pGridMap[i].state = TileState::bounceBox;
 			}
 			else
 			{
@@ -354,7 +363,8 @@ void UpdateTanks(float elapsedSec)
 			if (hspd != 0)
 			{
 				collisionRect.left += hspd;
-				if (CheckTileCollision(collisionRect).state != TileState::empty)
+				Tile tile{ CheckTileCollision(collisionRect) };
+				if ( tile.state == TileState::unbreakableWall || tile.state == TileState::breakableWall || tile.state == TileState::woodenBox)
 					hspd = 0;
 			}
 
@@ -365,13 +375,45 @@ void UpdateTanks(float elapsedSec)
 			if (vspd != 0)
 			{
 				collisionRect.bottom += vspd;
-				if (CheckTileCollision(collisionRect).state != TileState::empty)
+				Tile tile{ CheckTileCollision(collisionRect) };
+				if (tile.state == TileState::unbreakableWall || tile.state == TileState::breakableWall || tile.state == TileState::woodenBox)
 					vspd = 0;
 			}
 
 			// move tank
 			g_Tanks[i].position.x += hspd;
 			g_Tanks[i].position.y += vspd;
+			collisionRect.bottom = g_Tanks[i].position.y - g_Tanks[i].size * g_Scaling / 2;
+
+			// item check
+			Tile tile{ CheckTileCollision(collisionRect) };
+			if (tile.state == TileState::healthBox)
+			{
+				g_pGridMap[tile.idx].state = TileState::empty;
+				TakeDamage(g_Tanks[i], -1);
+			}
+			else if (tile.state == TileState::bounceBox)
+			{
+				g_pGridMap[tile.idx].state = TileState::empty;
+				for (int j{}; j < g_MaxProjectiles; ++j) 
+				{
+					g_Tanks[i].projectiles[j].state = ProjectileState::bouncing;
+				}
+			}
+
+			// check bouncing cooldown
+			if (g_Tanks[i].projectiles[0].state == ProjectileState::bouncing)  
+			{
+				if (g_MaxItemCooldown <= g_Tanks[i].itemCooldown) 
+				{
+					for (int j{}; j < g_MaxProjectiles; ++j)
+					{
+						g_Tanks[i].projectiles[j].state = ProjectileState::normal;
+					}
+					g_Tanks[i].itemCooldown = 0;
+				}
+				g_Tanks[i].itemCooldown += elapsedSec;
+			}
 		}
 	}
 
@@ -379,39 +421,68 @@ void UpdateTanks(float elapsedSec)
 
 void UpdateProjectiles(float elapsedSec)
 {
-	for (int i{}; i < g_PlayerCount; ++i) 
+	for (int i{}; i < g_PlayerCount; ++i)
 	{
-		for (int j{}; j < g_MaxProjectiles; ++j) 
+		for (int j{}; j < g_MaxProjectiles; ++j)
 		{
-			if (g_Tanks[i].projectiles[j].active)
+			Projectile& projectile{ g_Tanks[i].projectiles[j] };
+
+			if (projectile.active)
 			{
 				Rectf destinationProjectile{};
-				destinationProjectile.left = g_Tanks[i].projectiles[j].position.x - g_Tanks[i].projectiles[j].size / 2;
-				destinationProjectile.bottom = g_Tanks[i].projectiles[j].position.y - g_Tanks[i].projectiles[j].size / 2;
-				destinationProjectile.width = g_Tanks[i].projectiles[j].size;
-				destinationProjectile.height = g_Tanks[i].projectiles[j].size;
+				destinationProjectile.left = projectile.position.x - projectile.size / 2;
+				destinationProjectile.bottom = projectile.position.y - projectile.size / 2;
+				destinationProjectile.width = projectile.size;
+				destinationProjectile.height = projectile.size;
 
 				Tile tile{ CheckTileCollision(destinationProjectile) };
 
-				if (tile.state != TileState::empty && g_Tanks[i].projectiles[j].state != ProjectileState::bouncing)
+				if ((tile.state == TileState::unbreakableWall || tile.state == TileState::breakableWall || tile.state == TileState::woodenBox) && projectile.state != ProjectileState::bouncing)
 				{
-					g_Tanks[i].projectiles[j].active = false;
+					projectile.active = false;
 				}
-				else if(tile.state != TileState::empty)
+				else if (tile.state == TileState::unbreakableWall || tile.state == TileState::breakableWall || tile.state == TileState::woodenBox)
 				{
-					// TODO: bouncing 
+					// bouncing!
+					const int row{ tile.idx / g_Cols }, col{ tile.idx % g_Cols };
+					if ((projectile.position.y <= row * g_CellSize * g_Scaling) &&
+						projectile.position.x >= col * g_CellSize * g_Scaling)
+					{
+						// bottom bounce
+						projectile.position.y = row * g_CellSize * g_Scaling - projectile.size / 2;
+						projectile.angle *= -1;
+					}
+					else if ((projectile.position.y >= (row + 1) * g_CellSize * g_Scaling) &&
+						projectile.position.x >= col * g_CellSize * g_Scaling)
+					{
+						// top bounce
+						projectile.position.y = (row + 1) * g_CellSize * g_Scaling + projectile.size / 2;
+						projectile.angle *= -1;
+					}
+					else if (projectile.position.x >= col * g_CellSize * g_Scaling)
+					{
+						// right bounce
+						projectile.position.x = (col + 1) * g_CellSize * g_Scaling + projectile.size / 2;
+						projectile.angle += g_Pi - projectile.angle * 2;
+					}
+					else
+					{
+						// left bounce
+						projectile.position.x = col * g_CellSize * g_Scaling - projectile.size / 2;
+						projectile.angle += g_Pi - projectile.angle * 2;
+					}
 				}
 
 				switch (tile.state)
 				{
-				case TileState::woodenBox: 
+				case TileState::woodenBox:
 					g_pGridMap[tile.idx].state = TileState::empty;
 					break;
 				case TileState::unbreakableWall:
 					break;
 				case TileState::breakableWall:
 					--tile.health;
-					if (tile.health <= 0) 
+					if (tile.health <= 0)
 					{
 						g_pGridMap[tile.idx].state = TileState::empty;
 					}
@@ -421,13 +492,13 @@ void UpdateProjectiles(float elapsedSec)
 				CheckTankCollision(g_Tanks[i].projectiles[j]);
 
 				// movement
-				g_Tanks[i].projectiles[j].position.x += cosf(g_Tanks[i].projectiles[j].angle) * g_Tanks[i].projectiles[j].speed * elapsedSec;
-				g_Tanks[i].projectiles[j].position.y += sinf(g_Tanks[i].projectiles[j].angle) * g_Tanks[i].projectiles[j].speed * elapsedSec;
+				projectile.position.x += cosf(projectile.angle) * projectile.speed * elapsedSec;
+				projectile.position.y += sinf(projectile.angle) * projectile.speed * elapsedSec;
 
 				// collision checks
-				if (g_Tanks[i].projectiles[j].position.x >= g_WindowWidth || g_Tanks[i].projectiles[j].position.y >= g_WindowHeight || g_Tanks[i].projectiles[j].position.x <= 0 || g_Tanks[i].projectiles[j].position.y <= 0)
+				if (projectile.position.x >= g_WindowWidth || projectile.position.y >= g_WindowHeight || projectile.position.x <= 0 || projectile.position.y <= 0)
 				{
-					g_Tanks[i].projectiles[j].active = false;
+					projectile.active = false;
 				}
 			}
 		}
@@ -504,8 +575,8 @@ void DrawProjectiles()
 			if (g_Tanks[i].projectiles[j].active) 
 			{
 				Rectf destinationProjectile{};
-				destinationProjectile.left = g_Tanks[i].projectiles[j].position.x - g_ProjectileStandardTexture.width / 2;
-				destinationProjectile.bottom = g_Tanks[i].projectiles[j].position.y - g_ProjectileStandardTexture.height / 2;
+				destinationProjectile.left = g_Tanks[i].projectiles[j].position.x - g_ProjectileStandardTexture.width / 2 * g_Scaling;
+				destinationProjectile.bottom = g_Tanks[i].projectiles[j].position.y - g_ProjectileStandardTexture.height / 2 * g_Scaling;
 				destinationProjectile.width = g_ProjectileStandardTexture.width * g_Scaling;
 				destinationProjectile.height = g_ProjectileStandardTexture.height * g_Scaling;
 				DrawTexture(g_ProjectileStandardTexture, destinationProjectile, g_Tanks[i].projectiles[j].angle);
