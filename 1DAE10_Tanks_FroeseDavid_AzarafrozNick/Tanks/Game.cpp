@@ -37,7 +37,6 @@ void Update(float elapsedSec)
 	{
 		UpdateGameOver(elapsedSec);
 	}
-	
 }
 
 void End()
@@ -69,6 +68,30 @@ void OnKeyUpEvent(SDL_Keycode key)
 				FireProjectile(g_Tanks[i]);
 			}
 		}
+	}
+	switch (key)
+	{
+	case SDLK_i:
+		std::cout << "-- TANKS --\n";
+		std::cout << "A tanks implementation by Nick Azarafroz and David Froese\n";
+		std::cout << "All Graphics are self-made!\n\n";
+
+		std::cout << "--Controls-- \n";
+		std::cout << "Player 1:\n";
+		std::cout << "Move forward: W\n";
+		std::cout << "Move back: S\n";
+		std::cout << "Turn left: A\n";
+		std::cout << "Turn right: D\n";
+		std::cout << "Turn shoot: Space\n\n";
+
+		std::cout << "Player 2:\n";
+		std::cout << "Move forward: Arrow Up\n";
+		std::cout << "Move back: Arrow Down\n";
+		std::cout << "Turn left: Arrow Left\n";
+		std::cout << "Turn right: Arrow Right\n";
+		std::cout << "Turn shoot: Return\n\n";
+
+		break;
 	}
 }
 
