@@ -13,7 +13,7 @@ float g_WindowHeight{ 720 };
 
 #pragma region ownDeclarations
 // const globals:
-const int g_PlayerCount{ 4 };            // how many players? (up to 4)
+const int g_PlayerCount{ 2 };            // how many players? (up to 4)
 const float g_Scaling{ 2.0f };           // scaling of all tiles, sprites, etc.
 const int g_Rows{ 15 }, g_Cols{ 26 };    // rows and columns of map
 const float g_CellSize{ 24.0f };         // tile size
