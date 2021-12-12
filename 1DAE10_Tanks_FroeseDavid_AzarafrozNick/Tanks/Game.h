@@ -21,8 +21,8 @@ const float g_TankSpeed{ 130.0f };
 const float g_TankTurnSpeed{ g_Pi * 0.65f };
 const int g_TankHP{ 10 };
 const float g_TankSize{ 20.0f };
-const float g_ProjectileSpeed{ 600.0f };
-const int g_MaxProjectiles{ 3 };
+const float g_ProjectileSpeed{ 400.0f };
+const int g_MaxProjectiles{ 6 };
 const float g_ProjectileSize{ 8.0f };
 const float g_ItemCooldown{ 5.0f };
 
