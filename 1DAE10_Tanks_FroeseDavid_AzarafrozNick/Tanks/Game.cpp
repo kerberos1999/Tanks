@@ -74,33 +74,12 @@ void OnKeyUpEvent(SDL_Keycode key)
 
 void OnMouseMotionEvent(const SDL_MouseMotionEvent& e)
 {
-	//std::cout << "  [" << e.x << ", " << e.y << "]\n";
-	//Point2f mousePos{ float( e.x ), float( g_WindowHeight - e.y ) };
 }
-
 void OnMouseDownEvent(const SDL_MouseButtonEvent& e)
 {
-
 }
-
 void OnMouseUpEvent(const SDL_MouseButtonEvent& e)
 {
-	////std::cout << "  [" << e.x << ", " << e.y << "]\n";
-	//switch (e.button)
-	//{
-	//case SDL_BUTTON_LEFT:
-	//{
-	//	//std::cout << "Left mouse button released\n";
-	//	//Point2f mousePos{ float( e.x ), float( g_WindowHeight - e.y ) };
-	//	break;
-	//}
-	//case SDL_BUTTON_RIGHT:
-	//	//std::cout << "Right mouse button released\n";
-	//	break;
-	//case SDL_BUTTON_MIDDLE:
-	//	//std::cout << "Middle mouse button released\n";
-	//	break;
-	//}
 }
 #pragma endregion inputHandling
 
@@ -109,6 +88,13 @@ void OnMouseUpEvent(const SDL_MouseButtonEvent& e)
 
 void LoadTextures()
 {
+	const Color4f playerColors[]{
+		Color4f{198 / 255.0f, 245 / 255.0f, 148 / 255.0f, 1.0f},
+		Color4f{238 / 255.0f, 114 / 255.0f, 126 / 255.0f, 1.0f},
+		Color4f{173 / 255.0f, 202 / 255.0f, 255 / 255.0f, 1.0f},
+		Color4f{227 / 255.0f, 165 / 255.0f, 208 / 255.0f, 1.0f}
+	};
+
 	for (int i{}; i < g_PlayerCount; ++i)
 	{
 		// textures
@@ -124,7 +110,7 @@ void LoadTextures()
 		if (!TextureFromFile("Resources/tank_destroyed_" + std::to_string(i) + ".png", g_Tanks[i].destroyedTexture))
 			std::cout << "Resources/tank_destroyed_" + std::to_string(i) + ".png " << "could not be loaded!" << '\n';
 
-		if (!TextureFromString("Player " + std::to_string(i + 1) + " has won!", "Resources/arialbd.ttf", 30, Color4f(1.0f, 1.0f, 1.0f, 1.0f), g_GameOverTextures[i]))
+		if (!TextureFromString("Player " + std::to_string(i + 1) + " has won!", "Resources/arialbd.ttf", 30, playerColors[i], g_GameOverTextures[i]))
 			std::cout << "Resources/tank_destroyed_" + std::to_string(i) + ".png " << "could not be loaded!" << '\n';
 	}
 
@@ -189,25 +175,18 @@ void InitGame()
 		}
 		else
 		{
-			// REMOVE THIS AND GENERATE DECENT MAPS PLS
+			// generate map
 			int randomNumber{ rand() % 101 };
-			if (randomNumber <= 75)
+			if (randomNumber <= 70)
 			{
 				g_pGridMap[i].state = TileState::empty;
 			}
-			else if (randomNumber <= 85)
+			else if (randomNumber <= 90)
 			{
 				g_pGridMap[i].state = TileState::unbreakableWall;
+				
 			}
-			else if (randomNumber <= 86)
-			{
-				g_pGridMap[i].state = TileState::healthBox;
-			}
-			else if (randomNumber <= 88)
-			{
-				g_pGridMap[i].state = TileState::bounceBox;
-			}
-			else
+			else 
 			{
 				g_pGridMap[i].state = TileState::woodenBox;
 			}
@@ -307,7 +286,7 @@ void TakeDamage(Tank& tank, int damage)
 void UpdateTanks(float elapsedSec)
 {
 	// check if player has won
-	int count{}, winnerIndex{};
+	int count{}, winnerIndex{ -1 };
 	for (int i{}; i < g_PlayerCount; i++)
 	{
 		if (g_Tanks[i].currentHP > 0)
@@ -316,7 +295,7 @@ void UpdateTanks(float elapsedSec)
 			winnerIndex = i;
 		}
 	}
-	if (count == 1)
+	if (count <= 1)
 	{
 		g_TankWinnerIndex = winnerIndex;
 		g_GameOver = true;
@@ -404,7 +383,7 @@ void UpdateTanks(float elapsedSec)
 			// check bouncing cooldown
 			if (g_Tanks[i].projectiles[0].state == ProjectileState::bouncing)  
 			{
-				if (g_MaxItemCooldown <= g_Tanks[i].itemCooldown) 
+				if (g_ItemCooldown <= g_Tanks[i].itemCooldown) 
 				{
 					for (int j{}; j < g_MaxProjectiles; ++j)
 					{
@@ -437,11 +416,11 @@ void UpdateProjectiles(float elapsedSec)
 
 				Tile tile{ CheckTileCollision(destinationProjectile) };
 
-				if ((tile.state == TileState::unbreakableWall || tile.state == TileState::breakableWall || tile.state == TileState::woodenBox) && projectile.state != ProjectileState::bouncing)
+				if (tile.state == TileState::woodenBox ||((tile.state == TileState::unbreakableWall || tile.state == TileState::breakableWall) && projectile.state != ProjectileState::bouncing))
 				{
 					projectile.active = false;
 				}
-				else if (tile.state == TileState::unbreakableWall || tile.state == TileState::breakableWall || tile.state == TileState::woodenBox)
+				else if (tile.state == TileState::unbreakableWall || tile.state == TileState::breakableWall)
 				{
 					// bouncing!
 					const int row{ tile.idx / g_Cols }, col{ tile.idx % g_Cols };
@@ -476,7 +455,15 @@ void UpdateProjectiles(float elapsedSec)
 				switch (tile.state)
 				{
 				case TileState::woodenBox:
-					g_pGridMap[tile.idx].state = TileState::empty;
+					if (rand() % 2 >= 1) // chance to get a item: 50%
+					{
+						g_pGridMap[tile.idx].state = TileState(int(TileState::healthBox) + rand() % 2);
+					}
+					else 
+					{
+						g_pGridMap[tile.idx].state = TileState::empty;
+					}
+					
 					break;
 				case TileState::unbreakableWall:
 					break;
@@ -619,7 +606,7 @@ void DrawHealthBars()
 }
 void DrawGameOver()
 {
-	if (g_GameOver)
+	if (g_GameOver && g_TankWinnerIndex != -1)
 	{
 		const float width{ 300 * g_Scaling }, height{ 100 * g_Scaling };
 		const Color4f color{ 33 / 255.0f, 31 / 255.0f, 51 / 255.0f, 0.75f };

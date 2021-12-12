@@ -5,7 +5,7 @@ using namespace utils;
 std::string g_WindowTitle{ "Tanks - Froese_Azarafroz, David_Nick - 1DAE11/10" };
 
 // Change the window dimensions here
-float g_WindowWidth{ 960 };
+float g_WindowWidth{ 1248 };
 float g_WindowHeight{ 720 };
 #pragma endregion gameInformation
 
@@ -13,19 +13,18 @@ float g_WindowHeight{ 720 };
 
 #pragma region ownDeclarations
 // const globals:
-const int g_PlayerCount{ 2 };            // how many players? (up to 4)
+const int g_PlayerCount{ 4 };            // how many players? (up to 4)
 const float g_Scaling{ 2.0f };           // scaling of all tiles, sprites, etc.
-const int g_Rows{ 15 }, g_Cols{ 20 };    // rows and columns of map
-const float g_CellSize{ 24.0f };
-const float g_TankSpeed{ 120.0f };
-const float g_TankTurnSpeed{ g_Pi / 2 };
+const int g_Rows{ 15 }, g_Cols{ 26 };    // rows and columns of map
+const float g_CellSize{ 24.0f };         // tile size
+const float g_TankSpeed{ 130.0f };       
+const float g_TankTurnSpeed{ g_Pi * 0.65f };
 const int g_TankHP{ 10 };
 const float g_TankSize{ 20.0f };
 const float g_ProjectileSpeed{ 600.0f };
 const int g_MaxProjectiles{ 3 };
 const float g_ProjectileSize{ 8.0f };
-const int g_MaxItems{ 2 };
-const float g_MaxItemCooldown{ 3.0f };
+const float g_ItemCooldown{ 5.0f };
 
 // enums:
 enum class ProjectileState
