@@ -259,14 +259,22 @@ void FireProjectile(Tank& tank)
 Tile CheckTileCollision(const Rectf& collisionRect)
 {
 	// check if rectangle is colliding with wall in grid
+	Tile tile{};
 	for (int i{}; i < g_Rows * g_Cols; i++)
 	{
 		int row{ i / g_Cols }, col{ i % g_Cols };
 		Rectf tileRect{ col * g_CellSize * g_Scaling, row * g_CellSize * g_Scaling, g_CellSize * g_Scaling, g_CellSize * g_Scaling};
 		if (g_pGridMap[i].state != TileState::empty && IsOverlapping(collisionRect, tileRect))
-			return g_pGridMap[i];
+		{
+			// if not item do not return immediately and store tile to variable!
+			if (g_pGridMap[i].state == TileState::unbreakableWall || g_pGridMap[i].state == TileState::breakableWall || g_pGridMap[i].state == TileState::woodenBox)
+			{
+				return g_pGridMap[i];
+			}
+			tile = g_pGridMap[i];
+		}
 	}
-	return Tile{};
+	return tile;
 }
 
 void CheckTankCollision(Projectile& projectile)
